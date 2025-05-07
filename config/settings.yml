@@ -1,0 +1,8 @@
+plugins:
+  discourse_send_sms_for_review_enabled:
+    default: false
+    client: true
+  discourse_send_sms_for_review_logging_enabled:
+    default: true
+    client: false
+

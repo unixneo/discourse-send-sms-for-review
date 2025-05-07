@@ -1,0 +1,5 @@
+en:
+  site_settings:
+    discourse_send_sms_for_review_enabled: "Enable SMS notifications for posts requiring approval"
+    discourse_send_sms_for_review_logging_enabled: "Enable logging of SMS delivery attempts"
+
