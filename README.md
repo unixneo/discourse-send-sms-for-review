@@ -1,6 +1,5 @@
 ### ✅ `README.md`
 
-````markdown
 # discourse-send-sms-for-review
 
 A Discourse plugin that sends an SMS via the OpenPhone API when a new post enters the moderation queue for approval.
