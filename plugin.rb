@@ -30,7 +30,7 @@ after_initialize do
 
       config = YAML.load_file(config_path)
       api_key     = config['OPENPHONE_API']
-      from_number = config['OPENPHONE_PHONE_NUMBER']
+      from_number = config['OPENPHONE_PHONE_NUMBER_ALERTS']
       to_number   = config['OPENPHONE_PHONE_NUMBER']
 
       if api_key.blank? || from_number.blank? || to_number.blank?
