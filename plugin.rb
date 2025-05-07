@@ -1,8 +1,8 @@
 # name: discourse-send-sms-for-review
 # about: Send SMS via OpenPhone when posts require approval
-# version: 0.3
+# version: 0.4
 # authors: unix.com
-# url: https://unix.com
+# url: https://github.com/unixneo/discourse-send-sms-for-review
 
 require 'yaml'
 require 'httparty'
@@ -18,28 +18,44 @@ after_initialize do
   end
 
   DiscourseEvent.on(:post_created) do |post|
-    next unless SiteSetting.discourse_send_sms_for_review_enabled
-    next unless post.needs_approval?
-
     begin
-      config_path = "/etc/rails-env/.config.yml"
-      unless File.exist?(config_path)
-        Rails.logger.warn("[SMS-Review] Config file not found") if SiteSetting.discourse_send_sms_for_review_logging_enabled
+      Rails.logger.info("[SMS-Review] post_created hook triggered")
+
+      unless SiteSetting.discourse_send_sms_for_review_enabled
+        Rails.logger.info("[SMS-Review] Plugin disabled via site setting")
         next
       end
 
+      unless post&.needs_approval?
+        Rails.logger.info("[SMS-Review] Post does not require approval (post_id=#{post.id})")
+        next
+      end
+
+      config_path = "/shared/rails-env/.config.yml"
+      unless File.exist?(config_path)
+        Rails.logger.error("[SMS-Review] Config path not found: #{config_path}")
+        next
+      end
+
+      Rails.logger.info("[SMS-Review] Reading config from #{config_path}")
       config = YAML.load_file(config_path)
+
       api_key     = config['OPENPHONE_API']
       from_number = config['OPENPHONE_PHONE_NUMBER_ALERTS']
       to_number   = config['OPENPHONE_PHONE_NUMBER']
 
+      Rails.logger.info("[SMS-Review] Config loaded: from=#{from_number} to=#{to_number}")
+
       if api_key.blank? || from_number.blank? || to_number.blank?
-        Rails.logger.warn("[SMS-Review] Missing config keys") if SiteSetting.discourse_send_sms_for_review_logging_enabled
+        Rails.logger.error("[SMS-Review] Missing required config keys (api_key? #{api_key.present?})")
         next
       end
 
+      title = post.topic&.title || "Untitled Topic"
+      Rails.logger.info("[SMS-Review] Preparing payload for topic '#{title}'")
+
       payload = {
-        content: "New post awaiting approval: #{post.topic.title}",
+        content: "New post awaiting approval: #{title}",
         from: from_number,
         to: [to_number]
       }
@@ -53,19 +69,22 @@ after_initialize do
         body: payload.to_json
       )
 
+      Rails.logger.info("[SMS-Review] OpenPhone response: HTTP #{response.code}")
+
       if response.code == 202
-        body = JSON.parse(response.body) rescue nil
-        if body && body["messageId"]
-          Rails.logger.info("[SMS-Review] SMS sent successfully: ID #{body["messageId"]}") if SiteSetting.discourse_send_sms_for_review_logging_enabled
+        body = JSON.parse(response.body) rescue {}
+        if body["messageId"]
+          Rails.logger.info("[SMS-Review] SMS sent successfully: messageId=#{body["messageId"]}")
         else
-          Rails.logger.warn("[SMS-Review] SMS 202 but no messageId returned") if SiteSetting.discourse_send_sms_for_review_logging_enabled
+          Rails.logger.warn("[SMS-Review] 202 response but missing messageId in body")
         end
       else
-        Rails.logger.warn("[SMS-Review] SMS failed (#{response.code}): #{response.body}") if SiteSetting.discourse_send_sms_for_review_logging_enabled
+        Rails.logger.warn("[SMS-Review] Failed to send SMS: #{response.code} #{response.body}")
       end
 
     rescue => e
-      Rails.logger.error("[SMS-Review] Exception: #{e.message}") if SiteSetting.discourse_send_sms_for_review_logging_enabled
+      Rails.logger.error("[SMS-Review] Uncaught Exception: #{e.message}")
+      Rails.logger.error(e.backtrace.join("\n"))
     end
   end
 end
