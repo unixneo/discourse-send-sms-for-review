@@ -1,45 +1,97 @@
-### 📄 `README.md`
+### ✅ `README.md`
 
+````markdown
 # discourse-send-sms-for-review
 
-A Discourse plugin that sends an SMS via OpenPhone when a new post enters the moderation review queue (requires approval).
+A Discourse plugin that sends an SMS via the OpenPhone API when a new post enters the moderation queue for approval.
 
-## Features
+## ✅ Features
 
-- Sends SMS notifications using OpenPhone API
-- Reads API key, phone IDs, and numbers from `/etc/rails-env/.config.yml`
-- Fails silently on error — does not interfere with Discourse operations
-- Optional logging via site setting
+- Sends SMS alerts only for posts requiring approval (based on Reviewable presence)
+- Integrates with OpenPhone API (v1/messages)
+- Reads secrets and numbers from `/shared/rails-env/.config.yml`
+- Uses proper OpenPhone API structure, headers, and response fields (`data.id`, `data.status`)
+- Fails silently and logs detailed information to `production.log`
 
-## Installation
+---
 
-Clone into your Discourse plugin directory:
+## 📦 Installation
 
-```bash
-cd /var/discourse/plugins
-git clone https://github.com/YOUR_USERNAME/discourse-send-sms-for-review.git
-````
-
-Then rebuild or restart your app:
+1. Clone into your Discourse container's plugin directory:
 
 ```bash
 cd /var/discourse
-./launcher restart app
+git clone https://github.com/unixneo/discourse-send-sms-for-review.git plugins/discourse-send-sms-for-review
+````
+
+2. Edit `containers/app.yml` and add to `hooks.after_code`:
+
+```yaml
+hooks:
+  after_code:
+    - exec:
+        cd: $home/plugins
+        cmd:
+          - git clone https://github.com/unixneo/discourse-send-sms-for-review.git
 ```
 
-## Configuration
+3. Rebuild Discourse:
 
-Add the following site setting in Admin > Settings:
+```bash
+./launcher rebuild app
+```
 
-* `discourse_send_sms_for_review_enabled`: Enable or disable SMS notifications
-* `discourse_send_sms_for_review_logging_enabled`: Enable or disable plugin logging
+---
 
-Edit `/etc/rails-env/.config.yml` with the following required keys:
+## 🔧 Configuration
+
+In Discourse Admin Panel > Settings:
+
+* Enable: `discourse_send_sms_for_review_enabled`
+
+Update `/shared/rails-env/.config.yml` with required values:
 
 ```yaml
 OPENPHONE_API: "your_api_key"
-OPENPHONE_PHONE_NUMBER: "+1xxxxxxxxxx"
+OPENPHONE_PHONE_NUMBER_ALERTS: "+16503889610"
+OPENPHONE_PHONE_NUMBER: "+17035318965"
 ```
+
+---
+
+## 📋 Example SMS Sent
+
+```json
+{
+  "content": "New post awaiting approval: How to reset root password",
+  "from": "+16503889610",
+  "to": ["+17035318965"]
+}
+```
+
+---
+
+## 📝 Logging
+
+Logs appear in:
+
+```
+/shared/log/rails/production.log
+```
+
+Log tags include `[SMS-Review]` and cover all stages of processing.
+
+---
+
+## 🔐 API Used
+
+* OpenPhone Messages API: `POST /v1/messages`
+* Headers:
+
+  * `Authorization: <api_key>` (no Bearer prefix)
+  * `Content-Type: application/json`
+
+---
 
 ## License
 

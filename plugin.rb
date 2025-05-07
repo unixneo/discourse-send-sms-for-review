@@ -1,6 +1,6 @@
 # name: discourse-send-sms-for-review
 # about: Send SMS via OpenPhone when posts are flagged for approval
-# version: 0.6
+# version: 0.7
 # authors: unix.com
 # url: https://github.com/unixneo/discourse-send-sms-for-review
 
@@ -42,17 +42,13 @@ after_initialize do
         next
       end
 
-      Rails.logger.info("[SMS-Review] Reading config from #{config_path}")
       config = YAML.load_file(config_path)
-
       api_key     = config['OPENPHONE_API']
       from_number = config['OPENPHONE_PHONE_NUMBER_ALERTS']
       to_number   = config['OPENPHONE_PHONE_NUMBER']
 
-      Rails.logger.info("[SMS-Review] Config loaded: from=#{from_number} to=#{to_number}")
-
       if api_key.blank? || from_number.blank? || to_number.blank?
-        Rails.logger.error("[SMS-Review] Missing required config keys (api_key? #{api_key.present?})")
+        Rails.logger.error("[SMS-Review] Missing required config keys")
         next
       end
 
@@ -78,10 +74,12 @@ after_initialize do
 
       if response.code == 202
         body = JSON.parse(response.body) rescue {}
-        if body["messageId"]
-          Rails.logger.info("[SMS-Review] SMS sent successfully: messageId=#{body["messageId"]}")
+
+        data = body["data"]
+        if data && data["id"] && data["status"]
+          Rails.logger.info("[SMS-Review] SMS sent: id=#{data["id"]}, status=#{data["status"]}")
         else
-          Rails.logger.warn("[SMS-Review] 202 response but missing messageId in body")
+          Rails.logger.warn("[SMS-Review] 202 response missing 'data.id' or 'data.status'")
         end
       else
         Rails.logger.warn("[SMS-Review] Failed to send SMS: #{response.code} #{response.body}")
