@@ -1,6 +1,6 @@
 # name: discourse-send-sms-for-review
 # about: Send SMS via OpenPhone when posts require approval
-# version: 0.4
+# version: 0.5
 # authors: unix.com
 # url: https://github.com/unixneo/discourse-send-sms-for-review
 
@@ -26,8 +26,8 @@ after_initialize do
         next
       end
 
-      unless post&.needs_approval?
-        Rails.logger.info("[SMS-Review] Post does not require approval (post_id=#{post.id})")
+      unless post&.reviewable
+        Rails.logger.info("[SMS-Review] Post is not reviewable (post_id=#{post.id})")
         next
       end
 
