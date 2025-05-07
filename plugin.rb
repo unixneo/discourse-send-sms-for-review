@@ -1,6 +1,6 @@
 # name: discourse-send-sms-for-review
-# about: Send SMS via OpenPhone when posts require approval
-# version: 0.5
+# about: Send SMS via OpenPhone when posts are flagged for approval
+# version: 0.6
 # authors: unix.com
 # url: https://github.com/unixneo/discourse-send-sms-for-review
 
@@ -26,8 +26,13 @@ after_initialize do
         next
       end
 
-      unless post&.reviewable
-        Rails.logger.info("[SMS-Review] Post is not reviewable (post_id=#{post.id})")
+      unless post.is_a?(Post)
+        Rails.logger.warn("[SMS-Review] Unexpected object in post_created event")
+        next
+      end
+
+      unless Reviewable.exists?(target: post)
+        Rails.logger.info("[SMS-Review] No Reviewable found for post_id=#{post.id}")
         next
       end
 
