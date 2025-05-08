@@ -1,32 +1,41 @@
-
-### ✅ `README.md` (Redacted)
+### ✅ `README.md`
 
 # discourse-send-sms-for-review
 
-A Discourse plugin that sends an SMS via the OpenPhone API when a new post enters the moderation queue (i.e. flagged for review).
+A Discourse plugin that sends an SMS via the OpenPhone API when a newly created post is immediately placed into the moderation review queue.
+
+This plugin is intended for low-traffic sites where urgent moderation review is important and SMS alerts should be rare but actionable.
 
 ---
 
-## ✅ Features
+## ✅ What It Actually Does
 
-- Sends SMS alerts only for posts requiring approval (`Reviewable.exists?`)
-- Uses the OpenPhone Messages API (`POST /v1/messages`)
-- Reads configuration from `/shared/rails-env/.config.yml`
-- Logs all actions with UTC timestamps
-- Fails silently and safely if anything goes wrong
+- Listens for `:post_created` events from Discourse
+- Checks if a `Reviewable` record exists **at the moment the post is created**
+- If so, sends an SMS via OpenPhone with the topic title
+- Logs all decisions and actions with ISO 8601 UTC timestamps
+- Fails silently on all errors (no user interruption)
 
 ---
 
-## 📦 Installation
+## ⚙️ Requirements
 
-1. Clone the plugin into your Discourse container:
+- A working [OpenPhone](https://www.openphone.com) account with SMS-enabled number(s)
+- A local YAML config at `/etc/rails-env/.config.yml` containing your API key and phone numbers
+- That config file must be **mounted** into the container at `/shared/rails-env/.config.yml`
+
+---
+
+## 🛠️ Installation
+
+1. Clone the plugin into your Discourse instance:
 
 ```bash
 cd /var/discourse
 git clone https://github.com/unixneo/discourse-send-sms-for-review.git plugins/discourse-send-sms-for-review
 ````
 
-2. Edit your `containers/app.yml`:
+2. Edit `containers/app.yml`:
 
 Under `hooks.after_code`, add:
 
@@ -39,7 +48,7 @@ hooks:
           - git clone https://github.com/unixneo/discourse-send-sms-for-review.git
 ```
 
-Under `volumes`, add:
+Under `volumes`, add the following:
 
 ```yaml
 volumes:
@@ -48,7 +57,7 @@ volumes:
       guest: /shared/rails-env/.config.yml
 ```
 
-3. Rebuild the container:
+3. Rebuild your container:
 
 ```bash
 cd /var/discourse
@@ -59,27 +68,31 @@ cd /var/discourse
 
 ## 🔧 Configuration
 
-In `/shared/rails-env/.config.yml`, include:
+Create or edit this file on the host machine:
 
 ```yaml
+# /etc/rails-env/.config.yml
+
 OPENPHONE_API: "your_api_key"
-OPENPHONE_PHONE_NUMBER_ALERTS: "+1YOUR_ALERT_LINE"
-OPENPHONE_PHONE_NUMBER: "+1YOUR_PERSONAL_NUMBER"
+OPENPHONE_PHONE_NUMBER_ALERTS: "+1YOUR_SENDER_NUMBER"
+OPENPHONE_PHONE_NUMBER: "+1YOUR_DESTINATION_NUMBER"
 ```
 
-Then, in **Discourse Admin > Settings**, enable:
+Then inside Discourse, enable the plugin in:
 
-* `discourse_send_sms_for_review_enabled`
+```
+Admin > Settings > discourse_send_sms_for_review_enabled
+```
 
 ---
 
-## 📝 Example Payload Sent
+## 📨 SMS Payload Example
 
 ```json
 {
-  "from": "+1YOUR_ALERT_LINE",
-  "to": ["+1YOUR_PERSONAL_NUMBER"],
-  "content": "New post awaiting approval: Example topic title"
+  "from": "+1YOUR_SENDER_NUMBER",
+  "to": ["+1YOUR_DESTINATION_NUMBER"],
+  "content": "New post awaiting approval: How to reset root password"
 }
 ```
 
@@ -87,28 +100,28 @@ Then, in **Discourse Admin > Settings**, enable:
 
 ## 📋 Logging
 
-Logs are written to:
+All actions are logged to:
 
 ```
 /shared/log/rails/production.log
 ```
 
-Example entries (timestamped):
+Example entries:
 
 ```
-[2025-05-07T11:26:00Z] [SMS-Review] post_created hook triggered
-[2025-05-07T11:26:00Z] [SMS-Review] SMS sent: id=abc123, status=queued
+[2025-05-08T10:14:47Z] [SMS-Review] post_created hook triggered
+[2025-05-08T10:14:47Z] [SMS-Review] Sending SMS payload: {...}
+[2025-05-08T10:14:47Z] [SMS-Review] OpenPhone response: HTTP 202
+[2025-05-08T10:14:47Z] [SMS-Review] SMS sent: id=AC123..., status=delivered
 ```
 
 ---
 
-## 🔐 OpenPhone API
+## ❗ Important Behavior Notes
 
-* Endpoint: `POST https://api.openphone.com/v1/messages`
-* Headers:
-
-  * `Authorization: <API_KEY>` (no Bearer prefix)
-  * `Content-Type: application/json`
+* If the post is added to the review queue **after** creation (e.g., flagged later), no SMS will be sent.
+* The plugin only reacts at post creation time and checks if it's already reviewable.
+* To simulate review conditions for testing, see console examples in plugin documentation or issue a `DiscourseEvent.trigger(:post_created, post)` manually.
 
 ---
 
