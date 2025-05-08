@@ -1,6 +1,6 @@
 # name: discourse-send-sms-for-review
 # about: Send SMS via OpenPhone when posts are flagged for approval
-# version: 0.7.1
+# version: 0.7.2
 # authors: unix.com
 # url: https://github.com/unixneo/discourse-send-sms-for-review
 
