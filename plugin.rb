@@ -19,7 +19,7 @@ after_initialize do
   end
 
   def log_sms(level, msg)
-    timestamp = Time.now.utc.iso8601
+    timestamp = Time.now.utc.strftime("%Y-%m-%d %H:%M:%S UTC")
     Rails.logger.send(level, "[#{timestamp}] [SMS-Review] #{msg}")
   end
 
