@@ -1,12 +1,13 @@
 # name: discourse-send-sms-for-review
 # about: Send SMS via OpenPhone when posts are flagged for approval
-# version: 0.7.3
+# version: 0.8.0
 # authors: unix.com
 # url: https://github.com/unixneo/discourse-send-sms-for-review
 
 require 'yaml'
 require 'httparty'
 require 'time'
+require 'active_support/time'
 
 enabled_site_setting :discourse_send_sms_for_review_enabled
 
@@ -18,11 +19,11 @@ after_initialize do
     end
   end
 
- def log_sms(level, msg)
-  return unless SiteSetting.discourse_send_sms_for_review_logging_enabled
-  timestamp = Time.now.utc.strftime("%Y-%m-%d %H:%M:%S %z")
-  Rails.logger.send(level, "[#{timestamp}] [SMS-Review] #{msg}")
- end
+  def log_sms(level, msg)
+    return unless SiteSetting.discourse_send_sms_for_review_logging_enabled
+    timestamp = Time.now.utc.strftime("%Y-%m-%d %H:%M:%S %z")
+    Rails.logger.send(level, "[#{timestamp}] [SMS-Review] #{msg}")
+  end
 
   DiscourseEvent.on(:post_created) do |post|
     begin
@@ -30,6 +31,19 @@ after_initialize do
 
       unless SiteSetting.discourse_send_sms_for_review_enabled
         log_sms(:info, "Plugin disabled via site setting")
+        next
+      end
+
+      # Time window check
+      timezone = SiteSetting.discourse_send_sms_for_review_timezone.presence || "UTC"
+      tz = ActiveSupport::TimeZone[timezone] || ActiveSupport::TimeZone["UTC"]
+      local_time = tz.now
+
+      start_hour = SiteSetting.discourse_send_sms_for_review_start_hour
+      end_hour   = SiteSetting.discourse_send_sms_for_review_end_hour
+
+      unless (start_hour..end_hour).cover?(local_time.hour)
+        log_sms(:info, "SMS suppressed due to time window: #{local_time.strftime('%H:%M')} not in #{start_hour}:00–#{end_hour}:59 (#{timezone})")
         next
       end
 
