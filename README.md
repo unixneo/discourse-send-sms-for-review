@@ -1,43 +1,37 @@
-### ✅ `README.md`
+### ✅ `README.md` (v0.8.0)
 
 # discourse-send-sms-for-review
 
 A Discourse plugin that sends an SMS via the OpenPhone API when a newly created post is immediately placed into the moderation review queue.
 
-This plugin is intended for low-traffic sites where urgent moderation review is important and SMS alerts should be rare but actionable.
+Designed for low-traffic sites where urgent moderation needs can justify SMS alerts, but with strict time gating to avoid noise and overnight interruptions.
 
 ---
 
-## ✅ What It Actually Does
+## ✅ Features
 
-- Listens for `:post_created` events from Discourse
-- Checks if a `Reviewable` record exists **at the moment the post is created**
-- If so, sends an SMS via OpenPhone with the topic title
-- Logs all decisions and actions with ISO 8601 UTC timestamps
-- Fails silently on all errors (no user interruption)
-
----
-
-## ⚙️ Requirements
-
-- A working [OpenPhone](https://www.openphone.com) account with SMS-enabled number(s)
-- A local YAML config at `/etc/rails-env/.config.yml` containing your API key and phone numbers
-- That config file must be **mounted** into the container at `/shared/rails-env/.config.yml`
+- Listens for `:post_created` events
+- Checks if the post is immediately associated with a `Reviewable` (e.g., queued post, flagged post)
+- Sends an SMS via OpenPhone with the topic title
+- Supports local time windows (e.g., only alert between 08:00 and 21:00)
+- Time zone fully configurable using IANA zone names (e.g., `Asia/Bangkok`)
+- All behavior and logging controlled via admin settings
+- Fails silently and logs clearly
 
 ---
 
-## 🛠️ Installation
+## 📦 Installation
 
-1. Clone the plugin into your Discourse instance:
+1. Clone into your Discourse container:
 
 ```bash
 cd /var/discourse
 git clone https://github.com/unixneo/discourse-send-sms-for-review.git plugins/discourse-send-sms-for-review
 ````
 
-2. Edit `containers/app.yml`:
+2. In `containers/app.yml`:
 
-Under `hooks.after_code`, add:
+Under `hooks.after_code`:
 
 ```yaml
 hooks:
@@ -48,7 +42,7 @@ hooks:
           - git clone https://github.com/unixneo/discourse-send-sms-for-review.git
 ```
 
-Under `volumes`, add the following:
+Under `volumes`:
 
 ```yaml
 volumes:
@@ -57,10 +51,9 @@ volumes:
       guest: /shared/rails-env/.config.yml
 ```
 
-3. Rebuild your container:
+3. Rebuild Discourse:
 
 ```bash
-cd /var/discourse
 ./launcher rebuild app
 ```
 
@@ -68,31 +61,31 @@ cd /var/discourse
 
 ## 🔧 Configuration
 
-Create or edit this file on the host machine:
+### In `/etc/rails-env/.config.yml`:
 
 ```yaml
-# /etc/rails-env/.config.yml
-
 OPENPHONE_API: "your_api_key"
-OPENPHONE_PHONE_NUMBER_ALERTS: "+1YOUR_SENDER_NUMBER"
-OPENPHONE_PHONE_NUMBER: "+1YOUR_DESTINATION_NUMBER"
+OPENPHONE_PHONE_NUMBER_ALERTS: "+1YOUR_SENDER"
+OPENPHONE_PHONE_NUMBER: "+1YOUR_DESTINATION"
 ```
 
-Then inside Discourse, enable the plugin in:
+### In Discourse Admin > Settings:
 
-```
-Admin > Settings > discourse_send_sms_for_review_enabled
-```
+* `discourse_send_sms_for_review_enabled`: Enable/disable plugin
+* `discourse_send_sms_for_review_logging_enabled`: Enable/disable logging
+* `discourse_send_sms_for_review_start_hour`: Start of allowed SMS window (local hour, 0–23)
+* `discourse_send_sms_for_review_end_hour`: End of allowed SMS window (local hour, 0–23)
+* `discourse_send_sms_for_review_timezone`: IANA time zone name (e.g., `Asia/Bangkok`, `UTC`, `America/New_York`)
 
 ---
 
-## 📨 SMS Payload Example
+## 📨 Example Payload Sent
 
 ```json
 {
-  "from": "+1YOUR_SENDER_NUMBER",
-  "to": ["+1YOUR_DESTINATION_NUMBER"],
-  "content": "New post awaiting approval: How to reset root password"
+  "from": "+1YOUR_SENDER",
+  "to": ["+1YOUR_DESTINATION"],
+  "content": "New post awaiting approval: Test topic"
 }
 ```
 
@@ -100,28 +93,28 @@ Admin > Settings > discourse_send_sms_for_review_enabled
 
 ## 📋 Logging
 
-All actions are logged to:
+Logs go to:
 
 ```
 /shared/log/rails/production.log
 ```
 
-Example entries:
+Examples:
 
 ```
-[2025-05-08T10:14:47Z] [SMS-Review] post_created hook triggered
-[2025-05-08T10:14:47Z] [SMS-Review] Sending SMS payload: {...}
-[2025-05-08T10:14:47Z] [SMS-Review] OpenPhone response: HTTP 202
-[2025-05-08T10:14:47Z] [SMS-Review] SMS sent: id=AC123..., status=delivered
+[2025-05-08 10:14:47 +0000] [SMS-Review] post_created hook triggered
+[2025-05-08 10:14:47 +0000] [SMS-Review] SMS suppressed due to time window: 02:14 not in 8:00–21:59 (Asia/Bangkok)
 ```
 
 ---
 
-## ❗ Important Behavior Notes
+## 🔐 API
 
-* If the post is added to the review queue **after** creation (e.g., flagged later), no SMS will be sent.
-* The plugin only reacts at post creation time and checks if it's already reviewable.
-* To simulate review conditions for testing, see console examples in plugin documentation or issue a `DiscourseEvent.trigger(:post_created, post)` manually.
+* OpenPhone API endpoint: `POST https://api.openphone.com/v1/messages`
+* Headers:
+
+  * `Authorization: <API_KEY>` (no Bearer prefix)
+  * `Content-Type: application/json`
 
 ---
 
