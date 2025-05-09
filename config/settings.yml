@@ -5,4 +5,16 @@ plugins:
   discourse_send_sms_for_review_logging_enabled:
     default: true
     client: false
-
+  discourse_send_sms_for_review_start_hour:
+    default: 8
+    client: false
+    min: 0
+    max: 23
+  discourse_send_sms_for_review_end_hour:
+    default: 21
+    client: false
+    min: 0
+    max: 23
+  discourse_send_sms_for_review_timezone:
+    default: "Asia/Bangkok"
+    client: false
