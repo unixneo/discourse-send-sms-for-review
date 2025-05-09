@@ -2,4 +2,6 @@ en:
   site_settings:
     discourse_send_sms_for_review_enabled: "Enable SMS notifications for posts requiring approval"
     discourse_send_sms_for_review_logging_enabled: "Enable logging of SMS delivery attempts"
-
+    discourse_send_sms_for_review_start_hour: "Local start hour (0–23) to send SMS alerts"
+    discourse_send_sms_for_review_end_hour: "Local end hour (0–23) to send SMS alerts"
+    discourse_send_sms_for_review_timezone: "IANA time zone name used to control active hours (e.g., Asia/Bangkok)"
