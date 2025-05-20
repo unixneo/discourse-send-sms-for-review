@@ -1,6 +1,6 @@
 # name: discourse-send-sms-for-review
 # about: Send SMS via OpenPhone when posts are flagged for approval
-# version: 0.8.1
+# version: 0.8.2
 # authors: unix.com
 # url: https://github.com/unixneo/discourse-send-sms-for-review
 
@@ -89,7 +89,8 @@ after_initialize do
         "https://api.openphone.com/v1/messages",
         headers: {
           "Authorization" => api_key,
-          "Content-Type" => "application/json"
+          "Content-Type" => "application/json",
+          "User-Agent" => "LoadAlert/1.0"
         },
         body: payload.to_json
       )
