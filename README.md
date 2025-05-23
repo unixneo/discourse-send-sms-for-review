@@ -1,4 +1,4 @@
-### ✅ `README.md` (v0.8.0)
+### ✅ `README.md` (v0.8.3)
 
 # discourse-send-sms-for-review
 
