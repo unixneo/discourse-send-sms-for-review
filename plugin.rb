@@ -1,6 +1,6 @@
 # name: discourse-send-sms-for-review
 # about: Send SMS via OpenPhone when posts are flagged for approval
-# version: 0.8.2
+# version: 0.8.3
 # authors: unix.com
 # url: https://github.com/unixneo/discourse-send-sms-for-review
 
@@ -75,7 +75,7 @@ after_initialize do
       end
 
       title = post.topic&.title || "Untitled Topic"
-      message_text = "New post awaiting approval: #{title}"
+      message_text = "Community (UNIX): New post awaiting approval: #{title}"
 
       payload = {
         from: from_number,
